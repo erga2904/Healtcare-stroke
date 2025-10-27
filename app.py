@@ -1,14 +1,14 @@
 # app.py
-from flask import Flask, render_template, request, jsonify
+import os
 import joblib
 import pandas as pd
+from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
-# Muat model dan encoder
-model = joblib.load('stroke_model.joblib')
+# Load model dan encoder (pastikan file ini ada di root folder)
+model = joblib.load('best_model.joblib')
 label_encoders = joblib.load('label_encoders.joblib')
-feature_names = joblib.load('feature_names.joblib')
 
 @app.route('/')
 def index():
@@ -39,7 +39,7 @@ def predict():
             if df_input[col].iloc[0] in label_encoders[col].classes_:
                 df_input[col] = label_encoders[col].transform(df_input[col])
             else:
-                # Jika nilai tidak dikenal, gunakan modus (opsional)
+                # Jika nilai tidak dikenal, gunakan kelas pertama sebagai fallback
                 df_input[col] = label_encoders[col].transform([label_encoders[col].classes_[0]])[0]
 
         # Prediksi
@@ -52,7 +52,9 @@ def predict():
         return render_template('result.html', result=result, confidence=confidence)
 
     except Exception as e:
-        return f"Error: {str(e)}", 400
+        return f"Error: {str(e)}", 500
 
+# Jalankan aplikasi dengan konfigurasi Railway
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
